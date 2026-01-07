@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA2K搜打撤物资与资产记录表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0;
+            padding: 20px 10px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 1200px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #FFD700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #FFD700;
+        }
+
+        h2 {
+            text-align: center;
+            color: #FF6B6B;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .price-info {
+            text-align: center;
+            font-size: 1rem;
+            margin-bottom: 30px;
+            color: #B0B0B0;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+            overflow-y: visible;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            overflow: visible;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: visible;
+            position: relative;
+        }
+
+        /* 列宽调整：按照30等份分配 */
+        /* 假设表格总宽度为100%，则每等份约为3.333% */
+        th:nth-child(1),
+        td:nth-child(1) {
+            /* 群ID列：1份 */
+            width: 3.333%;
+            min-width: 60px;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            /* 现资产列：1份 */
+            width: 3.333%;
+            min-width: 80px;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+            /* 消费资产列：1份 */
+            width: 3.333%;
+            min-width: 90px;
+            font-size: 0.9em;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            /* 不朽陈列柜：4份 */
+            width: 13.333%;
+            min-width: 150px;
+        }
+
+        th:nth-child(5),
+        td:nth-child(5) {
+            /* 传奇陈列柜：6份 */
+            width: 20%;
+            min-width: 200px;
+        }
+
+        th:nth-child(6),
+        td:nth-child(6) {
+            /* 名人堂陈列柜：6份 */
+            width: 20%;
+            min-width: 200px;
+        }
+
+        th:nth-child(7),
+        td:nth-child(7) {
+            /* 黄金陈列柜：3份 */
+            width: 10%;
+            min-width: 120px;
+        }
+
+        th:nth-child(8),
+        td:nth-child(8) {
+            /* 白银陈列柜：3份 */
+            width: 10%;
+            min-width: 120px;
+        }
+
+        th:nth-child(9),
+        td:nth-child(9) {
+            /* 青铜陈列柜：3份 */
+            width: 10%;
+            min-width: 120px;
+        }
+
+        th:nth-child(10),
+        td:nth-child(10) {
+            /* 物资搜索列：2份 */
+            width: 6.666%;
+            min-width: 100px;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #E0E0E0;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-align: center !important;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .group-id-input {
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #E0E0E0;
+        }
+
+        .cost-input {
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #E0E0E0;
+        }
+
+        .asset-value {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .showcase {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            overflow: visible;
+        }
+
+        /* 为消费资产列添加右边框，与不朽陈列柜之间形成边界线 */
+        th:nth-child(3),
+        td:nth-child(3) {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 为青铜陈列柜添加右边框，与物资搜索之间形成边界线 */
+        th:nth-child(9),
+        td:nth-child(9) {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .showcase-container {
+            display: flex;
+            gap: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .showcase-half {
+            flex: 1;
+            height: 100%;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .showcase-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 2px;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: visible;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+            align-items: center;
+        }
+
+        /* 确保悬浮提示不被裁剪 */
+        .showcase-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .showcase-item {
+            position: relative;
+            z-index: 2;
+        }
+
+        .showcase-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .showcase-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .showcase-content::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .showcase-item {
+            position: relative;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            min-width: 70px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: visible;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            z-index: 1;
+        }
+
+        .showcase-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .showcase-item .delete-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #FF3B30;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+
+
+        .new-search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .new-item-search {
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #E0E0E0;
+        }
+
+        .new-item-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: rgba(18, 18, 18, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .new-item-list.show {
+            display: block;
+        }
+
+        .new-item-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .new-item-option:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .row-controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        .btn.delete {
+            background-color: #FF3B30;
+        }
+
+        .btn.delete:hover {
+            background-color: #FF2D20;
+        }
+
+        .auth-container {
+            margin: 20px auto;
+            max-width: 400px;
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #E0E0E0;
+            cursor: pointer;
+        }
+
+        .auth-tab.active {
+            background-color: #4CAF50;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #E0E0E0;
+        }
+
+        .unauthorized-message {
+            color: #FF3B30;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(255, 0, 0, 0.1);
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .item-database {
+            margin-top: 40px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .item-database h3 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .item-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .item-input {
+            flex: 1;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: #E0E0E0;
+        }
+
+        .item-list-container {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+        }
+
+        .item-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .item-list-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .item-list-container::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .database-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .database-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .save-controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .save-status {
+            margin-left: 20px;
+            color: #4CAF50;
+            font-size: 0.9rem;
+        }
+
+        @keyframes immortalGlow {
+            0% {
+                box-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700, 0 0 15px #FFD700;
+                background-color: rgba(0, 0, 0, 0.8);
+            }
+
+            50% {
+                box-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700;
+                background-color: rgba(0, 0, 0, 0.9);
+            }
+
+            100% {
+                box-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700, 0 0 15px #FFD700;
+                background-color: rgba(0, 0, 0, 0.8);
+            }
+        }
+
+        @keyframes legendaryGlow {
+            0% {
+                box-shadow: 0 0 5px #FF0000, 0 0 10px #FF0000;
+                background-color: rgba(255, 0, 0, 0.1);
+            }
+
+            50% {
+                box-shadow: 0 0 10px #FF0000, 0 0 20px #FF0000;
+                background-color: rgba(255, 0, 0, 0.15);
+            }
+
+            100% {
+                box-shadow: 0 0 5px #FF0000, 0 0 10px #FF0000;
+                background-color: rgba(255, 0, 0, 0.1);
+            }
+        }
+
+        @keyframes hallOfFameGlow {
+            0% {
+                box-shadow: 0 0 5px #9C27B0, 0 0 10px #9C27B0;
+                background-color: rgba(156, 39, 176, 0.1);
+            }
+
+            50% {
+                box-shadow: 0 0 10px #9C27B0, 0 0 20px #9C27B0;
+                background-color: rgba(156, 39, 176, 0.15);
+            }
+
+            100% {
+                box-shadow: 0 0 5px #9C27B0, 0 0 10px #9C27B0;
+                background-color: rgba(156, 39, 176, 0.1);
+            }
+        }
+
+        @keyframes goldGlow {
+            0% {
+                box-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700;
+                background-color: rgba(255, 215, 0, 0.1);
+            }
+
+            50% {
+                box-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700;
+                background-color: rgba(255, 215, 0, 0.15);
+            }
+
+            100% {
+                box-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700;
+                background-color: rgba(255, 215, 0, 0.1);
+            }
+        }
+
+        .showcase-item.immortal {
+            animation: immortalGlow 2s infinite;
+            color: #FFD700;
+        }
+
+        .showcase-item.legendary {
+            animation: legendaryGlow 2s infinite;
+            color: #FF0000;
+        }
+
+        .showcase-item.hall-of-fame {
+            animation: hallOfFameGlow 2s infinite;
+            color: #9C27B0;
+        }
+
+        .showcase-item.gold {
+            animation: goldGlow 2s infinite;
+            color: #FFD700;
+        }
+
+        .showcase-item.silver {
+            background-color: rgba(192, 192, 192, 0.1);
+            color: #C0C0C0;
+        }
+
+        .showcase-item.bronze {
+            background-color: rgba(205, 127, 50, 0.1);
+            color: #CD7F32;
+        }
+
+
+
+        .operation-logs {
+            margin: 30px 0;
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .operation-logs h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .logs-controls {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .logs-container {
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .logs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .log-item {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-item:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .log-time {
+            font-size: 0.8rem;
+            color: #B0B0B0;
+            margin-bottom: 4px;
+        }
+
+        .log-action {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .log-details {
+            font-size: 0.85rem;
+            color: #E0E0E0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.2rem;
+            }
+
+            th,
+            td {
+                padding: 8px;
+            }
+
+            .item-input-container {
+                flex-direction: column;
+            }
+
+            .logs-container {
+                max-height: 200px;
+            }
+        }
+    </style>
+    <script type="module">
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js'
+
+        // If you enabled Analytics in your project, add the Firebase SDK for Google Analytics
+        // import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js'
+
+        // Add Firebase products that you want to use
+        // import { getAuth } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js'
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js'
+        // 引入 Firebase 核心功能
+
+        // 新增函数：放在 script 标签较前的位置
+        function initRealtimeListeners() {
+            // 监听资产表格数据 (collection: "nba2k", document: "mainData")
+            window.onSnapshot(window.doc(window.db, "nba2k", "mainData"), (doc) => {
+                if (doc.exists()) {
+                    // 获取云端数据
+                    const remoteData = doc.data().tableData;
+                    // 只有当云端数据和本地不一致时才刷新，防止打字时被重置
+                    // 这里为了简化，直接全量覆盖并渲染
+                    tableData = remoteData;
+
+                    // 重新渲染表格（但不重新初始化Tooltip，防止闪烁）
+                    const tbody = document.querySelector('#assetTable tbody');
+                    // 保存当前焦点元素的ID，防止输入中断
+                    const activeElementId = document.activeElement ? document.activeElement.id : null;
+
+                    originalRenderTable(); // 使用原始渲染函数
+
+                    // 尝试恢复焦点
+                    if (activeElementId) {
+                        const el = document.getElementById(activeElementId);
+                        if (el) el.focus();
+                    }
+                } else {
+                    // 如果云端没数据，初始化一个
+                    console.log("云端无数据，正在初始化...");
+                    if (tableData.length === 0) {
+                        for (let i = 0; i < ROW_COUNT; i++) {
+                            tableData.push({
+                                groupId: '',
+                                cost: 0,
+                                sales: 0,
+                                showcases: { immortal: [], legendary: [], 'hall-of-fame': [], gold: [], silver: [], bronze: [] }
+                            });
+                        }
+                        saveTableData(); // 保存到云端
+                    }
+                }
+                updateSaveStatus("数据已同步");
+            });
+
+            // 监听物资库数据
+            window.onSnapshot(window.doc(window.db, "nba2k", "itemDatabase"), (doc) => {
+                if (doc.exists()) {
+                    itemDatabase = doc.data().items;
+                } else {
+                    // 初始化默认物资库
+                    itemDatabase = [
+                        { id: 1, quality: 'bronze', name: '全属性微幅增幅卡', description: '全属性+1' },
+                        { id: 42, quality: 'silver', name: '全属性进阶增幅卡', description: '全属性+2' },
+                        { id: 108, quality: 'gold', name: '高级控运属性提升包', description: '控球+30，运球速度+30' },
+                        { id: 153, quality: 'hall-of-fame', name: '传奇球商属性片', description: '传球智商+40，投篮智商+40，协防智商+40，造犯规+10' },
+                        { id: 206, quality: 'legendary', name: '欧气翻倍卡', description: '下一次搜索物资时，幸运值增加' },
+                        { id: 456, quality: 'immortal', name: '比尔·拉塞尔8枚总冠军指环臻品', description: '传奇中锋专属' }
+                    ];
+                    saveItemDatabase();
+                }
+            });
+
+            // 监听操作日志
+            window.onSnapshot(window.doc(window.db, "nba2k", "logs"), (doc) => {
+                if (doc.exists()) {
+                    operationLogs = doc.data().logs || [];
+                    renderOperationLogs();
+                }
+            });
+
+            // 监听用户列表（用于注册登录校验）
+            window.onSnapshot(window.doc(window.db, "nba2k", "users"), (doc) => {
+                if (doc.exists()) {
+                    const users = doc.data().list || [];
+                    localStorage.setItem('nba2k_users', JSON.stringify(users)); // 缓存到本地供原有逻辑使用
+                }
+            });
+        }
+
+
+        // TODO: 替换为你自己的 Firebase 配置信息 (从第一步中获取)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdXssDRTiCrg0Z14eWfF9JJKnpnOK47l0",
+            authDomain: "nba2k-tool.firebaseapp.com",
+            projectId: "nba2k-tool",
+            storageBucket: "nba2k-tool.appspot.com",
+            messagingSenderId: "123456",
+            appId: "1:123456:web:abcdefg1234567",
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 将 db 挂载到 window 对象，以便全局函数可以调用
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.onSnapshot = onSnapshot;
+        window.updateDoc = updateDoc;
+
+        // 初始化监听器
+        initRealtimeListeners();
+
+        console.log("Firebase 初始化完成");
+        console.log("window.db:", window.db);
+        console.log("window.doc:", window.doc);
+        console.log("window.setDoc:", window.setDoc);
+
+
+    </script>
+</head>
+
+<body>
+    <div id="tooltip"
+        style="position: fixed; right: 10px; top: 10px; background-color: rgba(0, 0, 0, 0.9); color: #E0E0E0; padding: 12px 16px; border-radius: 4px; z-index: 9999; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); pointer-events: none; display: none; white-space: nowrap;">
+    </div>
+    <div class="container">
+        <div class="auth-container" id="authContainer">
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+            </div>
+            <div class="auth-form" id="loginForm">
+                <input type="text" id="loginUserId" placeholder="请输入用户ID" class="auth-input">
+                <input type="text" id="loginPhoneSuffix" placeholder="请输入四位数手机尾号" class="auth-input" maxlength="4">
+                <button class="btn" onclick="login()">登录</button>
+            </div>
+            <div class="auth-form" id="registerForm" style="display: none;">
+                <input type="text" id="registerUserId" placeholder="请输入用户ID" class="auth-input">
+                <input type="text" id="registerPhoneSuffix" placeholder="请输入四位数手机尾号" class="auth-input" maxlength="4">
+                <button class="btn" onclick="register()">注册</button>
+            </div>
+        </div>
+        <div class="unauthorized-message" id="unauthorizedMessage">请先登录以进行编辑操作</div>
+        <h1>NBA2K搜打撤物资与资产记录表</h1>
+        <h2>B站2K发明家马上蹬作品</h2>
+        <div class="price-info">
+            所有物资价格（金币）如下：青铜1500/白银20000/黄金70000/名人堂150000/传奇500000/不朽3000000/可卖掉物资换取金币，金币可在资产商店购买物品
+        </div>
+
+        <div class="table-container">
+            <table id="assetTable">
+                <thead>
+                    <tr>
+                        <th>群ID</th>
+                        <th>现资产</th>
+                        <th>消费资产</th>
+                        <th>不朽陈列柜</th>
+                        <th>传奇陈列柜</th>
+                        <th>名人堂陈列柜</th>
+                        <th>黄金陈列柜</th>
+                        <th>白银陈列柜</th>
+                        <th>青铜陈列柜</th>
+                        <th>物资搜索</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row-controls">
+            <button class="btn" onclick="addRow()">增加行</button>
+            <button class="btn delete" onclick="deleteRow()">删除行</button>
+        </div>
+
+        <div class="save-controls">
+            <button class="btn" onclick="saveTableData()">手动保存</button>
+            <span class="save-status" id="saveStatus">自动保存中...</span>
+        </div>
+
+        <div class="operation-logs">
+            <h3>操作记录</h3>
+            <div class="logs-controls">
+                <button class="btn" onclick="exportOperationLogs()">导出记录</button>
+                <button class="btn delete" onclick="clearOperationLogs()">清空记录</button>
+            </div>
+            <div class="logs-container" id="logsContainer">
+                <div class="logs-list" id="logsList">
+                    <!-- 操作记录将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="item-database">
+            <h3 onclick="toggleDatabase()" style="cursor: pointer;">物资库 <span id="databaseStatus">[点击展开]</span></h3>
+            <div id="databaseContent" style="display: none;">
+                <div class="item-input-container">
+                    <textarea class="item-input" id="itemInput" rows="5" placeholder="输入物资：ID|品级|名称|描述（例如：1|bronze|全属性微幅增幅卡|全属性+1）
+支持批量添加，每行一条物资"></textarea>
+                    <button class="btn" onclick="addItem()">添加物资</button>
+                </div>
+                <div class="item-list-container" id="itemListContainer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ITEM_PRICES = {
+            bronze: 1500,
+            silver: 20000,
+            gold: 70000,
+            'hall-of-fame': 150000,
+            legendary: 500000,
+            immortal: 3000000
+        };
+
+
+
+        const ROW_COUNT = 15;
+        let tableData = [];
+        let itemDatabase = [];
+        let autoSaveInterval;
+        let operationLogs = [];
+
+        function initializeTable() {
+
+            if (tableData.length === 0) {
+                for (let i = 0; i < ROW_COUNT; i++) {
+                    tableData.push({
+                        groupId: '',
+                        cost: 0,
+                        sales: 0,
+                        showcases: {
+                            immortal: [],
+                            legendary: [],
+                            'hall-of-fame': [],
+                            gold: [],
+                            silver: [],
+                            bronze: []
+                        }
+                    });
+                }
+            } else {
+                // 为现有数据添加 sales 字段
+                tableData.forEach(row => {
+                    if (row.sales === undefined) {
+                        row.sales = 0;
+                    }
+                });
+            }
+
+            renderTable();
+            renderOperationLogs();
+            startAutoSave();
+        }
+
+        function renderTable() {
+            const tbody = document.querySelector('#assetTable tbody');
+            tbody.innerHTML = '';
+
+            tableData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td><input type="text" class="group-id-input" value="${row.groupId}" onchange="updateGroupId(${rowIndex}, this.value)"></td>
+                    <td class="asset-value" id="asset-${rowIndex}">${calculateAsset(rowIndex)}</td>
+                    <td><input type="number" class="cost-input" value="${row.cost || 0}" onchange="updateCost(${rowIndex}, this.value)"></td>
+                    <td>${createShowcase(rowIndex, 'immortal', row.showcases.immortal || [])}</td>
+                    <td>${createShowcase(rowIndex, 'legendary', row.showcases.legendary || [])}</td>
+                    <td>${createShowcase(rowIndex, 'hall-of-fame', row.showcases['hall-of-fame'] || [])}</td>
+                    <td>${createShowcase(rowIndex, 'gold', row.showcases.gold || [])}</td>
+                    <td>${createShowcase(rowIndex, 'silver', row.showcases.silver || [])}</td>
+                    <td>${createShowcase(rowIndex, 'bronze', row.showcases.bronze || [])}</td>
+                    <td>
+                        <div class="new-search-container">
+                            <input type="text" class="new-item-search" placeholder="搜索所有物资" 
+                                   data-row="${rowIndex}" 
+                                   oninput="handleNewItemSearch(event)">
+                            <div class="new-item-list" id="new-item-list-${rowIndex}"></div>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function createShowcase(rowIndex, quality, items) {
+            const halfIndex = Math.ceil(items.length / 2);
+            const leftItems = items.slice(0, halfIndex);
+            const rightItems = items.slice(halfIndex);
+
+            return `
+                <div class="showcase">
+                    <div class="showcase-container">
+                        <div class="showcase-half">
+                            <div class="showcase-content">
+                                ${leftItems.map((item, index) => createShowcaseItem(item, rowIndex, quality, index)).join('')}
+                            </div>
+                        </div>
+                        <div class="showcase-half">
+                            <div class="showcase-content">
+                                ${rightItems.map((item, index) => createShowcaseItem(item, rowIndex, quality, index + halfIndex)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createShowcaseItem(item, rowIndex, quality, itemIndex) {
+            // 根据不同品级的陈列柜宽度确定显示的字符数
+            const maxLengthMap = {
+                bronze: 10,    // 青铜陈列柜
+                silver: 12,    // 白银陈列柜
+                gold: 15,      // 黄金陈列柜
+                'hall-of-fame': 22,  // 名人堂陈列柜较宽
+                legendary: 22,       // 传奇陈列柜较宽
+                immortal: 18         // 不朽陈列柜
+            };
+
+            const maxLength = maxLengthMap[quality] || 12;
+            let displayName = item.name;
+
+            // 限制显示长度，超过部分显示省略号
+            if (displayName.length > maxLength) {
+                displayName = displayName.substring(0, maxLength) + '...';
+            }
+
+            return `
+                <div class="showcase-item ${quality}" 
+                     data-id="${item.id}" 
+                     data-name="${item.name}" 
+                     data-description="${item.description}">
+                    ${displayName}
+                    <button class="delete-btn" onclick="removeItemFromShowcase(${rowIndex}, '${quality}', ${itemIndex})">×</button>
+                </div>
+            `;
+        }
+
+
+
+        function handleNewItemSearch(e) {
+            const input = e.target;
+            const rowIndex = parseInt(input.dataset.row);
+            const query = input.value.toLowerCase();
+            const itemList = document.getElementById(`new-item-list-${rowIndex}`);
+
+            if (!query) {
+                itemList.innerHTML = '';
+                itemList.classList.remove('show');
+                return;
+            }
+
+            const filteredItems = itemDatabase.filter(item =>
+                item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+            );
+
+            itemList.innerHTML = filteredItems.map(item => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; transition: background-color 0.2s ease;" 
+                     onmouseenter="this.style.backgroundColor='rgba(255, 255, 255, 0.1)'" 
+                     onmouseleave="this.style.backgroundColor='transparent'">
+                    <div onclick="addItemToCorrespondingShowcase(${rowIndex}, ${item.id})" style="cursor: pointer;">
+                        ${item.name} (${item.quality})
+                    </div>
+                    <button class="btn" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;" 
+                            onclick="sellItemDirectly(${rowIndex}, ${item.id})">
+                        售卖
+                    </button>
+                </div>
+            `).join('');
+
+            itemList.classList.add('show');
+        }
+
+        function addItemToCorrespondingShowcase(rowIndex, itemId) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const item = itemDatabase.find(i => i.id === itemId);
+            if (!item) return;
+
+            const quality = item.quality;
+            const showcaseItems = tableData[rowIndex].showcases[quality] || [];
+
+            showcaseItems.push(item);
+            tableData[rowIndex].showcases[quality] = showcaseItems;
+            renderTable();
+            saveTableData();
+            logOperation('添加物资到陈列柜', {
+                '行号': rowIndex + 1,
+                '陈列柜': getQualityName(quality),
+                '物资名称': item.name,
+                '物资品级': getQualityName(quality)
+            });
+
+            const itemList = document.getElementById(`new-item-list-${rowIndex}`);
+            itemList.innerHTML = '';
+            itemList.classList.remove('show');
+
+            document.querySelector(`input[data-row="${rowIndex}"].new-item-search`).value = '';
+        }
+
+        function getQualityName(quality) {
+            const qualityNames = {
+                immortal: '不朽',
+                legendary: '传奇',
+                'hall-of-fame': '名人堂',
+                gold: '黄金',
+                silver: '白银',
+                bronze: '青铜'
+            };
+            return qualityNames[quality] || quality;
+        }
+
+        function addItemToShowcase(rowIndex, quality, itemId) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const item = itemDatabase.find(i => i.id === itemId);
+            if (!item) return;
+
+            const showcaseItems = tableData[rowIndex].showcases[quality] || [];
+
+            showcaseItems.push(item);
+            tableData[rowIndex].showcases[quality] = showcaseItems;
+            renderTable();
+            saveTableData();
+            logOperation('添加物资到陈列柜', {
+                '行号': rowIndex + 1,
+                '陈列柜': getQualityName(quality),
+                '物资名称': item.name,
+                '物资品级': getQualityName(item.quality)
+            });
+        }
+
+        function removeItemFromShowcase(rowIndex, quality, itemIndex) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const showcaseItems = tableData[rowIndex].showcases[quality] || [];
+            if (itemIndex >= 0 && itemIndex < showcaseItems.length) {
+                const removedItem = showcaseItems[itemIndex];
+                showcaseItems.splice(itemIndex, 1);
+                tableData[rowIndex].showcases[quality] = showcaseItems;
+                renderTable();
+                saveTableData();
+                logOperation('移除陈列柜物资', {
+                    '行号': rowIndex + 1,
+                    '陈列柜': getQualityName(quality),
+                    '物资名称': removedItem.name,
+                    '物资品级': getQualityName(removedItem.quality)
+                });
+            }
+        }
+
+        function sellItemDirectly(rowIndex, itemId) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const item = itemDatabase.find(i => i.id === itemId);
+            if (!item) return;
+
+            const itemValue = ITEM_PRICES[item.quality] || 0;
+
+            tableData[rowIndex].sales = (tableData[rowIndex].sales || 0) + itemValue;
+
+            renderTable();
+            saveTableData();
+            logOperation('直接售卖物资', {
+                '行号': rowIndex + 1,
+                '物资名称': item.name,
+                '物资品级': getQualityName(item.quality),
+                '售卖价格': itemValue,
+                '操作类型': '直接售卖'
+            });
+
+            const itemList = document.getElementById(`new-item-list-${rowIndex}`);
+            itemList.innerHTML = '';
+            itemList.classList.remove('show');
+
+            document.querySelector(`input[data-row="${rowIndex}"].new-item-search`).value = '';
+        }
+
+        function calculateAsset(rowIndex) {
+            const rowData = tableData[rowIndex];
+            if (!rowData) return 0;
+
+            let total = 0;
+            const showcases = rowData.showcases || {};
+
+            Object.keys(showcases).forEach(quality => {
+                const items = showcases[quality];
+                if (items && items.length > 0) {
+                    total += items.length * ITEM_PRICES[quality];
+                }
+            });
+
+            total += rowData.sales || 0;
+            total -= rowData.cost || 0;
+            return Math.max(0, total);
+        }
+
+        function updateGroupId(rowIndex, value) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const oldValue = tableData[rowIndex].groupId;
+            tableData[rowIndex].groupId = value;
+            saveTableData();
+            logOperation('修改群ID', {
+                '行号': rowIndex + 1,
+                '旧值': oldValue || '空',
+                '新值': value || '空'
+            });
+        }
+
+        function updateCost(rowIndex, value) {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const oldValue = tableData[rowIndex].cost || 0;
+            const newValue = parseInt(value) || 0;
+            tableData[rowIndex].cost = newValue;
+            renderTable();
+            saveTableData();
+            logOperation('修改消费资产', {
+                '行号': rowIndex + 1,
+                '旧值': oldValue,
+                '新值': newValue
+            });
+        }
+
+        function addRow() {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            tableData.push({
+                groupId: '',
+                cost: 0,
+                sales: 0,
+                showcases: {
+                    immortal: [],
+                    legendary: [],
+                    'hall-of-fame': [],
+                    gold: [],
+                    silver: [],
+                    bronze: []
+                }
+            });
+            renderTable();
+            saveTableData();
+            logOperation('行操作', {
+                '操作': '增加行',
+                '当前行数': tableData.length
+            });
+        }
+
+        function deleteRow() {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            if (tableData.length > 1) {
+                const deletedRow = tableData.pop();
+                renderTable();
+                saveTableData();
+                logOperation('行操作', {
+                    '操作': '删除行',
+                    '当前行数': tableData.length,
+                    '删除行群ID': deletedRow.groupId || '空'
+                });
+            } else {
+                alert('至少需要保留一行数据');
+            }
+        }
+
+        function addItem() {
+            const currentUser = checkAuth();
+            if (!currentUser) return;
+
+            const input = document.getElementById('itemInput');
+            const inputValue = input.value.trim();
+
+            if (!inputValue) {
+                alert('请输入物资信息');
+                return;
+            }
+
+            try {
+                const lines = inputValue.split('\n');
+                let addedCount = 0;
+                let errorCount = 0;
+
+                lines.forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) return;
+
+                    try {
+                        const parts = trimmedLine.split('|');
+                        if (parts.length !== 4) {
+                            throw new Error('格式错误');
+                        }
+
+                        const [id, quality, name, description] = parts;
+
+                        if (!['bronze', 'silver', 'gold', 'hall-of-fame', 'legendary', 'immortal'].includes(quality)) {
+                            throw new Error('品级错误');
+                        }
+
+                        const newItem = {
+                            id: parseInt(id),
+                            quality,
+                            name,
+                            description
+                        };
+
+                        if (!itemDatabase.some(item => item.id === newItem.id)) {
+                            itemDatabase.push(newItem);
+                            addedCount++;
+                        }
+                    } catch (error) {
+                        errorCount++;
+                    }
+                });
+
+                renderItemList();
+                saveItemDatabase();
+                input.value = '';
+
+                alert(`批量添加完成：成功添加 ${addedCount} 个物资，失败 ${errorCount} 个`);
+                if (addedCount > 0 || errorCount > 0) {
+                    logOperation('批量添加物资', {
+                        '总条数': lines.length,
+                        '成功添加': addedCount,
+                        '添加失败': errorCount
+                    });
+                }
+            } catch (error) {
+                alert('处理错误：' + error.message);
+            }
+        }
+
+        function renderItemList() {
+            const container = document.getElementById('itemListContainer');
+            container.innerHTML = '';
+
+            itemDatabase.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'database-item';
+                itemElement.innerHTML = `
+                    <div>
+                        <strong>${item.name}</strong> (${item.quality})
+                        <br>
+                        <small>${item.description}</small>
+                    </div>
+                    <button class="btn delete" onclick="removeItemFromDatabase(${item.id})">删除</button>
+                `;
+                container.appendChild(itemElement);
+            });
+        }
+
+        function removeItemFromDatabase(itemId) {
+            itemDatabase = itemDatabase.filter(item => item.id !== itemId);
+            renderItemList();
+            saveItemDatabase();
+        }
+
+        function saveTableData() {
+            // 防止尚未初始化就保存空数据
+            if (!window.db || tableData.length === 0) return;
+
+            updateSaveStatus('正在同步云端...');
+            // 写入 Firestore
+            window.setDoc(window.doc(window.db, "nba2k", "mainData"), {
+                tableData: tableData,
+                lastUpdated: new Date().toISOString()
+            }).then(() => {
+                updateSaveStatus('云端已保存');
+            }).catch((error) => {
+                console.error("保存失败: ", error);
+                updateSaveStatus('保存失败，请检查网络');
+            });
+        }
+
+        function saveItemDatabase() {
+            if (!window.db) return;
+            window.setDoc(window.doc(window.db, "nba2k", "itemDatabase"), {
+                items: itemDatabase
+            });
+        }
+
+        function loadTableDataFromStorage() {
+            const storedData = localStorage.getItem('nba2k_table_data');
+            if (storedData) {
+                tableData = JSON.parse(storedData);
+            }
+        }
+
+        function loadItemDatabaseFromStorage() {
+            const storedData = localStorage.getItem('nba2k_item_database');
+            if (storedData) {
+                itemDatabase = JSON.parse(storedData);
+            } else {
+                itemDatabase = [
+                    { id: 1, quality: 'bronze', name: '全属性微幅增幅卡', description: '全属性+1' },
+                    { id: 42, quality: 'silver', name: '全属性进阶增幅卡', description: '全属性+2' },
+                    { id: 108, quality: 'gold', name: '高级控运属性提升包', description: '控球+30，运球速度+30' },
+                    { id: 153, quality: 'hall-of-fame', name: '传奇球商属性片', description: '传球智商+40，投篮智商+40，协防智商+40，造犯规+10' },
+                    { id: 206, quality: 'legendary', name: '欧气翻倍卡', description: '下一次搜索物资时，幸运值增加' },
+                    { id: 456, quality: 'immortal', name: '比尔·拉塞尔8枚总冠军指环臻品', description: '传奇中锋专属' }
+                ];
+                saveItemDatabase();
+            }
+            // 移除自动渲染，只有在展开物资库时才渲染
+        }
+
+        function startAutoSave() {
+            autoSaveInterval = setInterval(() => {
+                saveTableData();
+            }, 30000);
+        }
+
+        function updateSaveStatus(message) {
+            const statusElement = document.getElementById('saveStatus');
+            statusElement.textContent = message;
+
+            setTimeout(() => {
+                statusElement.textContent = '自动保存中...';
+            }, 2000);
+        }
+
+        // 操作记录核心函数
+        function logOperation(action, details) {
+            const currentUser = localStorage.getItem('nba2k_current_user');
+            const log = {
+                timestamp: new Date().toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }),
+                action,
+                details,
+                operatorId: currentUser || '未知用户'
+            };
+
+            operationLogs.push(log);
+            saveOperationLogs();
+            renderOperationLogs();
+        }
+
+        function loadOperationLogs() {
+            const storedLogs = localStorage.getItem('nba2k_operation_logs');
+            if (storedLogs) {
+                operationLogs = JSON.parse(storedLogs);
+            }
+        }
+
+        function saveOperationLogs() {
+            if (!window.db) return;
+            window.setDoc(window.doc(window.db, "nba2k", "logs"), {
+                logs: operationLogs
+            });
+        }
+
+        function renderOperationLogs() {
+            const logsList = document.getElementById('logsList');
+            if (!logsList) return;
+
+            logsList.innerHTML = '';
+
+            if (operationLogs.length === 0) {
+                logsList.innerHTML = '<div style="text-align: center; color: #B0B0B0; padding: 20px;">暂无操作记录</div>';
+                return;
+            }
+
+            // 倒序显示，最新的在上面
+            const reversedLogs = [...operationLogs].reverse();
+
+            reversedLogs.forEach(log => {
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+
+                let detailsHtml = '';
+                if (typeof log.details === 'object') {
+                    detailsHtml = Object.entries(log.details)
+                        .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                        .join('<br>');
+                } else {
+                    detailsHtml = log.details;
+                }
+
+                logItem.innerHTML = `
+                    <div class="log-time">${log.timestamp}</div>
+                    <div class="log-action">${log.action} <span style="font-size: 0.8rem; color: #4CAF50;">(${log.operatorId || '未知用户'})</span></div>
+                    <div class="log-details">${detailsHtml}</div>
+                `;
+
+                logsList.appendChild(logItem);
+            });
+        }
+
+        function clearOperationLogs() {
+            if (confirm('确定要清空所有操作记录吗？此操作不可恢复。')) {
+                operationLogs = [];
+                saveOperationLogs();
+                renderOperationLogs();
+                logOperation('系统操作', '清空了所有操作记录');
+            }
+        }
+
+        function exportOperationLogs() {
+            if (operationLogs.length === 0) {
+                alert('暂无操作记录可导出');
+                return;
+            }
+
+            // 构建导出内容
+            let exportContent = 'NBA2K搜打撤物资与资产记录表 - 操作记录\n';
+            exportContent += '='.repeat(80) + '\n';
+            exportContent += '时间戳\t\t\t\t操作\t\t操作者\t\t详情\n';
+            exportContent += '-'.repeat(80) + '\n';
+
+            operationLogs.forEach(log => {
+                let detailsText = '';
+                if (typeof log.details === 'object') {
+                    detailsText = Object.entries(log.details)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join('; ');
+                } else {
+                    detailsText = log.details;
+                }
+                exportContent += `${log.timestamp}\t${log.action}\t${log.operatorId || '未知用户'}\t${detailsText}\n`;
+            });
+
+            // 创建Blob对象并下载
+            const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nba2k_operation_logs_${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            logOperation('系统操作', '导出了操作记录');
+        }
+
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.new-search-container')) {
+                document.querySelectorAll('.new-item-list').forEach(list => {
+                    list.classList.remove('show');
+                });
+            }
+        });
+
+        function toggleDatabase() {
+            const content = document.getElementById('databaseContent');
+            const status = document.getElementById('databaseStatus');
+
+            if (content.style.display === 'none') {
+                const password = prompt('请输入密码以展开物资库：');
+                if (password === '123456') {
+                    content.style.display = 'block';
+                    status.textContent = '[点击折叠]';
+                    renderItemList();
+                } else {
+                    alert('密码错误！');
+                }
+            } else {
+                content.style.display = 'none';
+                status.textContent = '[点击展开]';
+            }
+        }
+
+        // 悬浮提示功能
+        function initTooltips() {
+            const tooltip = document.getElementById('tooltip');
+
+            // 为所有陈列物资项添加事件监听器
+            document.querySelectorAll('.showcase-item').forEach(item => {
+                // 移除可能存在的旧监听器
+                item.removeEventListener('mouseenter', handleMouseEnter);
+                item.removeEventListener('mouseleave', handleMouseLeave);
+
+                // 添加新监听器
+                item.addEventListener('mouseenter', handleMouseEnter);
+                item.addEventListener('mouseleave', handleMouseLeave);
+            });
+
+            function handleMouseEnter(e) {
+                const description = this.getAttribute('data-description');
+                if (description) {
+                    tooltip.textContent = description;
+                    tooltip.style.display = 'block';
+                }
+            }
+
+            function handleMouseLeave() {
+                tooltip.style.display = 'none';
+            }
+        }
+
+        // 用户认证系统核心函数
+        function initUserStorage() {
+            if (!localStorage.getItem('nba2k_users')) {
+                localStorage.setItem('nba2k_users', JSON.stringify([]));
+            }
+        }
+
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginTab = document.querySelector('.auth-tab:first-child');
+            const registerTab = document.querySelector('.auth-tab:last-child');
+
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                loginTab.classList.remove('active');
+                registerTab.classList.add('active');
+            }
+        }
+
+        function register() {
+            const userId = document.getElementById('registerUserId').value.trim();
+            const phoneSuffix = document.getElementById('registerPhoneSuffix').value.trim();
+
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+
+            if (!/^\d{4}$/.test(phoneSuffix)) {
+                alert('请输入有效的四位数手机尾号');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('nba2k_users') || '[]');
+            if (users.some(user => user.userId === userId)) {
+                alert('该用户ID已存在，请更换');
+                return;
+            }
+
+            window.setDoc(window.doc(window.db, "nba2k", "users"), {
+                list: users
+            }).then(() => {
+                alert('注册成功，请登录');
+                switchAuthTab('login');
+            });
+        }
+
+        function login() {
+            const userId = document.getElementById('loginUserId').value.trim();
+            const phoneSuffix = document.getElementById('loginPhoneSuffix').value.trim();
+
+            const users = JSON.parse(localStorage.getItem('nba2k_users') || '[]');
+            const user = users.find(u => u.userId === userId && u.phoneSuffix === phoneSuffix);
+
+            if (!user) {
+                alert('用户ID或手机尾号错误');
+                return;
+            }
+
+            localStorage.setItem('nba2k_current_user', userId);
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('unauthorizedMessage').style.display = 'none';
+            logOperation('系统操作', `用户 ${userId} 登录成功`);
+        }
+
+        function checkAuth() {
+            const currentUser = localStorage.getItem('nba2k_current_user');
+            if (!currentUser) {
+                document.getElementById('unauthorizedMessage').style.display = 'block';
+                return false;
+            }
+            return currentUser;
+        }
+
+        // 重写renderTable函数，在渲染后初始化提示
+        const originalRenderTable = renderTable;
+        renderTable = function () {
+            originalRenderTable();
+            initTooltips();
+        };
+
+        // 修改initializeTable函数，添加用户存储初始化和登录状态检查
+        const originalInitializeTable = initializeTable;
+        initializeTable = function () {
+            initUserStorage();
+            const currentUser = localStorage.getItem('nba2k_current_user');
+            if (currentUser) {
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('unauthorizedMessage').style.display = 'none';
+            }
+            originalInitializeTable();
+        };
+
+        window.onload = initializeTable;
+    </script>
+</body>
+
+</html>
