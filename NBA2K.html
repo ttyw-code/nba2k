@@ -707,7 +707,7 @@
 
         // Add Firebase products that you want to use
         // import { getAuth } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js'
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js'
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc ,getDoc } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js'
         // 引入 Firebase 核心功能
 
         // 新增函数：放在 script 标签较前的位置
@@ -754,7 +754,9 @@
             // 监听物资库数据
             window.onSnapshot(window.doc(window.db, "nba2k", "itemDatabase"), (doc) => {
                 if (doc.exists()) {
+                    console.log("物资库数据已加载");
                     itemDatabase = doc.data().items;
+                    console.log("当前物资库：", itemDatabase);
                 } else {
                     // 初始化默认物资库
                     itemDatabase = [
@@ -780,8 +782,10 @@
             // 监听用户列表（用于注册登录校验）
             window.onSnapshot(window.doc(window.db, "nba2k", "users"), (doc) => {
                 if (doc.exists()) {
-                    const users = doc.data().list || [];
-                    localStorage.setItem('nba2k_users', JSON.stringify(users)); // 缓存到本地供原有逻辑使用
+                    window.allUsers = doc.data().list || [];
+                    console.log("用户列表已同步，当前用户数:", window.allUsers.length);
+                } else {
+                    window.allUsers = []; // 如果还没人注册过
                 }
             });
         }
@@ -805,6 +809,7 @@
         window.db = db;
         window.doc = doc;
         window.setDoc = setDoc;
+        window.getDoc = getDoc;
         window.onSnapshot = onSnapshot;
         window.updateDoc = updateDoc;
 
@@ -1631,49 +1636,78 @@
             }
         }
 
-        function register() {
+        async function register() {
             const userId = document.getElementById('registerUserId').value.trim();
             const phoneSuffix = document.getElementById('registerPhoneSuffix').value.trim();
 
-            if (!userId) {
-                alert('请输入用户ID');
+            if (!userId) { alert('请输入用户ID'); return; }
+            if (!/^\d{4}$/.test(phoneSuffix)) { alert('请输入有效的四位数手机尾号'); return; }
+
+            // 1. 获取云端最新数据 (确保不覆盖别人刚注册的账号)
+            // 虽然我们有 window.allUsers，但注册时为了安全，建议强制读取一次最新版
+            let currentUsers = [];
+            try {
+                const userDocRef = window.doc(window.db, "nba2k", "users");
+                const userDocSnap = await window.getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    console.log("用户列表读取成功");
+                    console.log("userDocSnap.data().list:", userDocSnap.data().list);
+                    currentUsers = userDocSnap.data().list || [];
+                }
+            } catch (e) {
+                console.error("读取用户列表失败", e);
+                alert("连接服务器失败，请检查网络");
                 return;
             }
 
-            if (!/^\d{4}$/.test(phoneSuffix)) {
-                alert('请输入有效的四位数手机尾号');
-                return;
-            }
-
-            const users = JSON.parse(localStorage.getItem('nba2k_users') || '[]');
-            if (users.some(user => user.userId === userId)) {
+            // 2. 检查重复
+            if (currentUsers.some(user => user.userId === userId)) {
                 alert('该用户ID已存在，请更换');
                 return;
             }
 
-            window.setDoc(window.doc(window.db, "nba2k", "users"), {
-                list: users
-            }).then(() => {
+            // 3. 添加新用户
+            currentUsers.push({ userId, phoneSuffix });
+
+            // 4. 保存回云端
+            try {
+                await window.setDoc(window.doc(window.db, "nba2k", "users"), {
+                    list: currentUsers
+                });
                 alert('注册成功，请登录');
                 switchAuthTab('login');
-            });
+            } catch (e) {
+                console.error("注册失败", e);
+                alert("注册保存失败: " + e.message);
+            }
         }
 
         function login() {
             const userId = document.getElementById('loginUserId').value.trim();
             const phoneSuffix = document.getElementById('loginPhoneSuffix').value.trim();
 
-            const users = JSON.parse(localStorage.getItem('nba2k_users') || '[]');
-            const user = users.find(u => u.userId === userId && u.phoneSuffix === phoneSuffix);
-
-            if (!user) {
-                alert('用户ID或手机尾号错误');
+            // 检查数据是否已经加载
+            if (!window.allUsers) {
+                alert("系统正在连接服务器，请稍后几秒再试...");
                 return;
             }
 
+            // 在全局变量中查找匹配的用户
+            const user = window.allUsers.find(u => u.userId === userId && u.phoneSuffix === phoneSuffix);
+
+            if (!user) {
+                alert('用户ID或手机尾号错误（或账号尚未同步，请稍等）');
+                return;
+            }
+
+            // 登录成功，保存状态到本地，以免刷新页面需要重登
             localStorage.setItem('nba2k_current_user', userId);
+
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('unauthorizedMessage').style.display = 'none';
+
+            // 记录日志
             logOperation('系统操作', `用户 ${userId} 登录成功`);
         }
 
