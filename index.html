@@ -820,7 +820,23 @@
             immortal: 3000000
         };
 
+        const MAIN_ACTIVE_INTERVAL = 4000;
+        const MAIN_IDLE_INTERVAL = 15000;
+        const MAIN_HIDDEN_INTERVAL = 45000;
+        const USER_IDLE_THRESHOLD = 60000;
+        const ITEM_SYNC_INTERVAL = 20000;
+        const LOG_SYNC_INTERVAL = 15000;
+        const USER_SYNC_INTERVAL = 60000;
+        const INPUT_TAGS = ['INPUT', 'TEXTAREA'];
 
+        let pollingTimer = null;
+        let lastInteractionTime = Date.now();
+        let lastItemSync = 0;
+        let lastLogSync = 0;
+        let lastUserSync = 0;
+        let lastMainDataSignature = null;
+        let lastItemSignature = null;
+        let lastLogSignature = null;
 
         const ROW_COUNT = 15;
         let tableData = [];
@@ -1277,8 +1293,13 @@
             const query = Bmob.Query('MainData');
             query.get(window.mainDataId).then(res => {
                 res.set('tableData', tableData);
-                res.save().then(() => updateSaveStatus('表格已保存'))
-                    .catch(e => updateSaveStatus('保存失败'));
+                res.save().then(() => {
+                    lastMainDataSignature = JSON.stringify(tableData);
+                    updateSaveStatus('表格已保存');
+                }).catch(e => updateSaveStatus('保存失败'));
+            }).catch(err => {
+                console.error('获取主表数据失败', err);
+                updateSaveStatus('保存失败');
             });
         }
 
@@ -1292,12 +1313,16 @@
             query.get(window.itemDbId).then(res => {
                 res.set('items', itemDatabase);
                 res.save().then(() => {
+                    lastItemSignature = JSON.stringify(itemDatabase);
                     console.log("物资库保存成功");
                     alert("物资库已更新到云端");
                 }).catch(err => {
                     console.error("物资库保存失败", err);
                     alert("保存失败: " + err);
                 });
+            }).catch(err => {
+                console.error("获取物资库失败", err);
+                alert("保存失败: " + err);
             });
         }
 
@@ -1382,8 +1407,10 @@
             query.get(window.logsId).then(res => {
                 res.set('logs', operationLogs);
                 // 日志更新比较频繁，就不alert弹窗打扰了，后台静默保存
-                res.save().catch(err => console.error("日志保存失败", err));
-            });
+                res.save().then(() => {
+                    lastLogSignature = JSON.stringify(operationLogs);
+                }).catch(err => console.error("日志保存失败", err));
+            }).catch(err => console.error("获取日志数据失败", err));
         }
 
         function renderOperationLogs() {
@@ -1474,6 +1501,17 @@
                 document.querySelectorAll('.new-item-list').forEach(list => {
                     list.classList.remove('show');
                 });
+            }
+        });
+
+        ['pointerdown', 'keydown', 'touchstart'].forEach(eventName => {
+            document.addEventListener(eventName, recordUserInteraction, { passive: true });
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            recordUserInteraction();
+            if (!document.hidden) {
+                runPollingCycle(true);
             }
         });
 
@@ -1652,90 +1690,145 @@
 
         function initPolling() {
             console.log("正在启动数据同步...");
+            runPollingCycle(true);
+        }
 
-            // 立即执行一次
-            fetchMainData();
-            fetchItemData();
-            fetchLogs();
-            fetchAllUsers();
+        function getAdaptiveInterval() {
+            if (document.hidden) {
+                return MAIN_HIDDEN_INTERVAL;
+            }
+            const idle = Date.now() - lastInteractionTime >= USER_IDLE_THRESHOLD;
+            return idle ? MAIN_IDLE_INTERVAL : MAIN_ACTIVE_INTERVAL;
+        }
 
-            // 开启自动轮询 (每 3000 毫秒 = 3秒同步一次)
-            // 你可以修改这个数字，越小同步越快，但流量消耗越大
-            setInterval(() => {
-                // 只有当用户没有正在输入的时候才刷新，防止打断输入
-                // document.activeElement 检查当前焦点是否在输入框里
-                const tagName = document.activeElement ? document.activeElement.tagName : '';
-                if (tagName !== 'INPUT' && tagName !== 'TEXTAREA') {
-                    fetchMainData();
-                } else {
-                    console.log("用户正在输入，跳过本次表格刷新");
-                }
+        function recordUserInteraction() {
+            lastInteractionTime = Date.now();
+        }
 
-                // 物资库和日志可以随时刷新
-                fetchItemData();
-                fetchLogs();
-                // 用户列表不需要频繁刷新，这里不放进去
-            }, 3000);
+        function scheduleNextPoll() {
+            clearTimeout(pollingTimer);
+            pollingTimer = setTimeout(runPollingCycle, getAdaptiveInterval());
+        }
+
+        function runPollingCycle(force = false) {
+            const now = Date.now();
+            const activeElement = document.activeElement;
+            const tagName = activeElement ? activeElement.tagName : '';
+            const isEditing = INPUT_TAGS.includes(tagName);
+            const tasks = [];
+
+            if (force || (!document.hidden && !isEditing)) {
+                tasks.push(fetchMainData());
+            }
+
+            if (force || now - lastItemSync >= ITEM_SYNC_INTERVAL) {
+                lastItemSync = now;
+                tasks.push(fetchItemData());
+            }
+
+            if (force || now - lastLogSync >= LOG_SYNC_INTERVAL) {
+                lastLogSync = now;
+                tasks.push(fetchLogs());
+            }
+
+            if (force || now - lastUserSync >= USER_SYNC_INTERVAL) {
+                lastUserSync = now;
+                tasks.push(fetchAllUsers());
+            }
+
+            if (tasks.length === 0) {
+                scheduleNextPoll();
+                return;
+            }
+
+            Promise.allSettled(tasks).finally(scheduleNextPoll);
         }
 
         // --- A. 拉取主表格 ---
         function fetchMainData() {
-            const query = Bmob.Query('MainData');
-            query.find().then(res => {
-                if (res.length > 0) {
-                    // 如果云端 ID 还没记下来，记下来
-                    if (!window.mainDataId) window.mainDataId = res[0].objectId;
-
-                    // 只有数据不一样时才渲染，避免页面闪烁
-                    const remoteData = res[0].tableData || [];
-                    // 简单对比长度或者转 JSON 对比
-                    if (JSON.stringify(tableData) !== JSON.stringify(remoteData)) {
+            if (window.mainDataId) {
+                const query = Bmob.Query('MainData');
+                return query.get(window.mainDataId).then(res => {
+                    const remoteData = res.tableData || [];
+                    const remoteSignature = JSON.stringify(remoteData);
+                    if (remoteSignature !== lastMainDataSignature) {
                         console.log("检测到云端表格更新，正在同步...");
                         tableData = remoteData;
+                        lastMainDataSignature = remoteSignature;
+                        originalRenderTable();
+                    }
+                }).catch(err => console.error("同步表格失败:", err));
+            }
+
+            const query = Bmob.Query('MainData');
+            query.limit(1);
+            return query.find().then(res => {
+                if (res.length > 0) {
+                    window.mainDataId = res[0].objectId;
+                    const remoteData = res[0].tableData || [];
+                    const remoteSignature = JSON.stringify(remoteData);
+                    if (remoteSignature !== lastMainDataSignature) {
+                        tableData = remoteData;
+                        lastMainDataSignature = remoteSignature;
                         originalRenderTable();
                     }
                 } else {
-                    // 如果完全没数据，初始化
-                    if (!window.mainDataId) {
-                        console.log("初始化主表格...");
-                        const q = Bmob.Query('MainData');
-                        q.set("tableData", tableData);
-                        q.save().then(obj => window.mainDataId = obj.objectId);
-                    }
+                    console.log("初始化主表格...");
+                    const createQuery = Bmob.Query('MainData');
+                    createQuery.set("tableData", tableData);
+                    return createQuery.save().then(obj => {
+                        window.mainDataId = obj.objectId;
+                        lastMainDataSignature = JSON.stringify(tableData);
+                    });
                 }
             }).catch(err => console.error("同步表格失败:", err));
         }
 
         // --- B. 拉取物资库 ---
         function fetchItemData() {
-            const query = Bmob.Query('ItemData');
-            query.find().then(res => {
-                if (res.length > 0) {
-                    // 1. 记录 ID
-                    if (!window.itemDbId) window.itemDbId = res[0].objectId;
-
-                    const remoteItems = res[0].items || [];
-
-                    // 2. 【关键修改】如果云端存在这行数据，但是数组是空的，说明是刚初始化的空表
-                    // 此时我们需要强制写入默认物资
+            if (window.itemDbId) {
+                const query = Bmob.Query('ItemData');
+                return query.get(window.itemDbId).then(res => {
+                    const remoteItems = res.items || [];
                     if (remoteItems.length === 0) {
                         console.log("检测到物资库为空，正在写入默认物资...");
-                        initDefaultItems();
-                        return;
+                        return initDefaultItems();
                     }
 
-                    // 3. 正常同步逻辑
-                    if (JSON.stringify(itemDatabase) !== JSON.stringify(remoteItems)) {
+                    const remoteSignature = JSON.stringify(remoteItems);
+                    if (remoteSignature !== lastItemSignature) {
                         itemDatabase = remoteItems;
-                        // 如果物资库面板开着，刷新它
+                        lastItemSignature = remoteSignature;
+                        const container = document.getElementById('itemListContainer');
+                        if (container && container.innerHTML !== "") {
+                            renderItemList();
+                        }
+                    }
+                }).catch(err => console.warn("拉取物资库失败:", err));
+            }
+
+            const query = Bmob.Query('ItemData');
+            query.limit(1);
+            return query.find().then(res => {
+                if (res.length > 0) {
+                    window.itemDbId = res[0].objectId;
+                    const remoteItems = res[0].items || [];
+                    if (remoteItems.length === 0) {
+                        console.log("检测到物资库为空，正在写入默认物资...");
+                        return initDefaultItems();
+                    }
+
+                    const remoteSignature = JSON.stringify(remoteItems);
+                    if (remoteSignature !== lastItemSignature) {
+                        itemDatabase = remoteItems;
+                        lastItemSignature = remoteSignature;
                         const container = document.getElementById('itemListContainer');
                         if (container && container.innerHTML !== "") {
                             renderItemList();
                         }
                     }
                 } else {
-                    // 4. 如果连表都不存在
-                    initDefaultItems();
+                    return initDefaultItems();
                 }
             }).catch(err => {
                 console.warn("拉取物资库失败:", err);
@@ -1744,25 +1837,40 @@
 
         // --- C. 拉取日志 ---
         function fetchLogs() {
-            const query = Bmob.Query('LogData');
-            query.find().then(res => {
-                if (res.length > 0) {
-                    if (!window.logsId) window.logsId = res[0].objectId;
-
-                    const remoteLogs = res[0].logs || [];
-                    // 只有日志数量变了才刷新
-                    if (remoteLogs.length !== operationLogs.length) {
+            if (window.logsId) {
+                const query = Bmob.Query('LogData');
+                return query.get(window.logsId).then(res => {
+                    const remoteLogs = res.logs || [];
+                    const remoteSignature = JSON.stringify(remoteLogs);
+                    if (remoteSignature !== lastLogSignature) {
                         operationLogs = remoteLogs;
+                        lastLogSignature = remoteSignature;
+                        renderOperationLogs();
+                    }
+                }).catch(err => console.warn("拉取日志失败:", err));
+            }
+
+            const query = Bmob.Query('LogData');
+            query.limit(1);
+            return query.find().then(res => {
+                if (res.length > 0) {
+                    window.logsId = res[0].objectId;
+                    const remoteLogs = res[0].logs || [];
+                    const remoteSignature = JSON.stringify(remoteLogs);
+                    if (remoteSignature !== lastLogSignature) {
+                        operationLogs = remoteLogs;
+                        lastLogSignature = remoteSignature;
                         renderOperationLogs();
                     }
                 } else {
-                    if (!window.logsId) {
-                        const q = Bmob.Query('LogData');
-                        q.set("logs", []);
-                        q.save().then(obj => window.logsId = obj.objectId);
-                    }
+                    const createQuery = Bmob.Query('LogData');
+                    createQuery.set("logs", []);
+                    return createQuery.save().then(obj => {
+                        window.logsId = obj.objectId;
+                        lastLogSignature = JSON.stringify([]);
+                    });
                 }
-            });
+            }).catch(err => console.warn("拉取日志失败:", err));
         }
 
         // 初始化默认物资库逻辑
@@ -1778,37 +1886,35 @@
 
             // 先在本地显示，让用户看着爽
             itemDatabase = defaultItems;
+            lastItemSignature = JSON.stringify(defaultItems);
             const container = document.getElementById('itemListContainer');
             if (container && container.innerHTML !== "") renderItemList();
 
-            const query = Bmob.Query('ItemData');
-
-            // 【关键修改】判断是“新建”还是“更新”
             if (window.itemDbId) {
-                // 如果 ID 存在，说明表已经在那里了（虽然是空的），我们要“修改”它，而不是新建
                 console.log("正在填充空表 ID:", window.itemDbId);
-                query.get(window.itemDbId).then(obj => {
+                const updateQuery = Bmob.Query('ItemData');
+                return updateQuery.get(window.itemDbId).then(obj => {
                     obj.set("items", defaultItems);
-                    obj.save().then(() => console.log("默认物资填充成功"));
-                });
-            } else {
-                // ID 不存在，说明完全没表，新建一行
-                console.log("正在新建物资表...");
-                query.set("items", defaultItems);
-                query.save().then(obj => {
-                    window.itemDbId = obj.objectId;
-                    console.log("默认物资新建成功");
-                });
+                    return obj.save().then(() => console.log("默认物资填充成功"));
+                }).catch(err => console.warn("填充物资库失败:", err));
             }
+
+            console.log("正在新建物资表...");
+            const createQuery = Bmob.Query('ItemData');
+            createQuery.set("items", defaultItems);
+            return createQuery.save().then(obj => {
+                window.itemDbId = obj.objectId;
+                console.log("默认物资新建成功");
+            }).catch(err => console.warn("创建物资库失败:", err));
         }
 
         // --- D. 拉取用户列表 ---
         function fetchAllUsers() {
             const query = Bmob.Query('GameUsers');
             query.limit(500);
-            query.find().then(res => {
+            return query.find().then(res => {
                 window.allUsers = res || [];
-            });
+            }).catch(err => console.warn("拉取用户列表失败:", err));
         }
     </script>
 </body>
