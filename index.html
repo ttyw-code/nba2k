@@ -698,128 +698,26 @@
             }
         }
     </style>
+    <script src="./Bmob-2.6.3.min.js"></script>
     <script type="module">
 
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js'
+        // ==========================================
+        // 1. 初始化配置 (请修改这里)
+        // ==========================================
+        // 请去 Bmob 后台 -> 设置 -> 应用密钥 获取
+        const BMOB_SECRET_KEY = "c064cdf57e852be4";
+        const BMOB_API_SAFE_CODE = "6742687146742687";
 
-        // If you enabled Analytics in your project, add the Firebase SDK for Google Analytics
-        // import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js'
+        Bmob.initialize(BMOB_SECRET_KEY, BMOB_API_SAFE_CODE);
 
-        // Add Firebase products that you want to use
-        // import { getAuth } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js'
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc ,getDoc } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js'
-        // 引入 Firebase 核心功能
+        // 全局变量定义
+        window.Bmob = Bmob;
+        window.allUsers = [];
 
-        // 新增函数：放在 script 标签较前的位置
-        function initRealtimeListeners() {
-            // 监听资产表格数据 (collection: "nba2k", document: "mainData")
-            window.onSnapshot(window.doc(window.db, "nba2k", "mainData"), (doc) => {
-                if (doc.exists()) {
-                    // 获取云端数据
-                    const remoteData = doc.data().tableData;
-                    // 只有当云端数据和本地不一致时才刷新，防止打字时被重置
-                    // 这里为了简化，直接全量覆盖并渲染
-                    tableData = remoteData;
-
-                    // 重新渲染表格（但不重新初始化Tooltip，防止闪烁）
-                    const tbody = document.querySelector('#assetTable tbody');
-                    // 保存当前焦点元素的ID，防止输入中断
-                    const activeElementId = document.activeElement ? document.activeElement.id : null;
-
-                    originalRenderTable(); // 使用原始渲染函数
-
-                    // 尝试恢复焦点
-                    if (activeElementId) {
-                        const el = document.getElementById(activeElementId);
-                        if (el) el.focus();
-                    }
-                } else {
-                    // 如果云端没数据，初始化一个
-                    console.log("云端无数据，正在初始化...");
-                    if (tableData.length === 0) {
-                        for (let i = 0; i < ROW_COUNT; i++) {
-                            tableData.push({
-                                groupId: '',
-                                cost: 0,
-                                sales: 0,
-                                showcases: { immortal: [], legendary: [], 'hall-of-fame': [], gold: [], silver: [], bronze: [] }
-                            });
-                        }
-                        saveTableData(); // 保存到云端
-                    }
-                }
-                updateSaveStatus("数据已同步");
-            });
-
-            // 监听物资库数据
-            window.onSnapshot(window.doc(window.db, "nba2k", "itemDatabase"), (doc) => {
-                if (doc.exists()) {
-                    console.log("物资库数据已加载");
-                    itemDatabase = doc.data().items;
-                    console.log("当前物资库：", itemDatabase);
-                } else {
-                    // 初始化默认物资库
-                    itemDatabase = [
-                        { id: 1, quality: 'bronze', name: '全属性微幅增幅卡', description: '全属性+1' },
-                        { id: 42, quality: 'silver', name: '全属性进阶增幅卡', description: '全属性+2' },
-                        { id: 108, quality: 'gold', name: '高级控运属性提升包', description: '控球+30，运球速度+30' },
-                        { id: 153, quality: 'hall-of-fame', name: '传奇球商属性片', description: '传球智商+40，投篮智商+40，协防智商+40，造犯规+10' },
-                        { id: 206, quality: 'legendary', name: '欧气翻倍卡', description: '下一次搜索物资时，幸运值增加' },
-                        { id: 456, quality: 'immortal', name: '比尔·拉塞尔8枚总冠军指环臻品', description: '传奇中锋专属' }
-                    ];
-                    saveItemDatabase();
-                }
-            });
-
-            // 监听操作日志
-            window.onSnapshot(window.doc(window.db, "nba2k", "logs"), (doc) => {
-                if (doc.exists()) {
-                    operationLogs = doc.data().logs || [];
-                    renderOperationLogs();
-                }
-            });
-
-            // 监听用户列表（用于注册登录校验）
-            window.onSnapshot(window.doc(window.db, "nba2k", "users"), (doc) => {
-                if (doc.exists()) {
-                    window.allUsers = doc.data().list || [];
-                    console.log("用户列表已同步，当前用户数:", window.allUsers.length);
-                } else {
-                    window.allUsers = []; // 如果还没人注册过
-                }
-            });
-        }
-
-
-        // TODO: 替换为你自己的 Firebase 配置信息 (从第一步中获取)
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdXssDRTiCrg0Z14eWfF9JJKnpnOK47l0",
-            authDomain: "nba2k-tool.firebaseapp.com",
-            projectId: "nba2k-tool",
-            storageBucket: "nba2k-tool.appspot.com",
-            messagingSenderId: "123456",
-            appId: "1:123456:web:abcdefg1234567",
-        };
-
-        // 初始化 Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // 将 db 挂载到 window 对象，以便全局函数可以调用
-        window.db = db;
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.getDoc = getDoc;
-        window.onSnapshot = onSnapshot;
-        window.updateDoc = updateDoc;
-
-        // 初始化监听器
-        initRealtimeListeners();
-
-        console.log("Firebase 初始化完成");
-        console.log("window.db:", window.db);
-        console.log("window.doc:", window.doc);
-        console.log("window.setDoc:", window.setDoc);
+        // 用来存储 Bmob 数据库中对应行的 ID，更新数据时需要用到
+        window.mainDataId = null;  // 主表格 ID
+        window.itemDbId = null;    // 物资库 ID
+        window.logsId = null;      // 日志 ID
 
 
     </script>
@@ -1373,26 +1271,32 @@
         }
 
         function saveTableData() {
-            // 防止尚未初始化就保存空数据
-            if (!window.db || tableData.length === 0) return;
-
-            updateSaveStatus('正在同步云端...');
-            // 写入 Firestore
-            window.setDoc(window.doc(window.db, "nba2k", "mainData"), {
-                tableData: tableData,
-                lastUpdated: new Date().toISOString()
-            }).then(() => {
-                updateSaveStatus('云端已保存');
-            }).catch((error) => {
-                console.error("保存失败: ", error);
-                updateSaveStatus('保存失败，请检查网络');
+            if (!window.mainDataId) return;
+            updateSaveStatus('正在同步表格...');
+            const query = Bmob.Query('MainData');
+            query.get(window.mainDataId).then(res => {
+                res.set('tableData', tableData);
+                res.save().then(() => updateSaveStatus('表格已保存'))
+                    .catch(e => updateSaveStatus('保存失败'));
             });
         }
 
         function saveItemDatabase() {
-            if (!window.db) return;
-            window.setDoc(window.doc(window.db, "nba2k", "itemDatabase"), {
-                items: itemDatabase
+            if (!window.itemDbId) {
+                console.error("物资库尚未初始化，无法保存");
+                return;
+            }
+
+            const query = Bmob.Query('ItemData');
+            query.get(window.itemDbId).then(res => {
+                res.set('items', itemDatabase);
+                res.save().then(() => {
+                    console.log("物资库保存成功");
+                    alert("物资库已更新到云端");
+                }).catch(err => {
+                    console.error("物资库保存失败", err);
+                    alert("保存失败: " + err);
+                });
             });
         }
 
@@ -1466,9 +1370,18 @@
         }
 
         function saveOperationLogs() {
-            if (!window.db) return;
-            window.setDoc(window.doc(window.db, "nba2k", "logs"), {
-                logs: operationLogs
+            if (!window.logsId) return;
+
+            // 优化：为了防止日志无限膨胀，只保留最近的 200 条
+            if (operationLogs.length > 200) {
+                operationLogs = operationLogs.slice(0, 200);
+            }
+
+            const query = Bmob.Query('LogData');
+            query.get(window.logsId).then(res => {
+                res.set('logs', operationLogs);
+                // 日志更新比较频繁，就不alert弹窗打扰了，后台静默保存
+                res.save().catch(err => console.error("日志保存失败", err));
             });
         }
 
@@ -1640,74 +1553,45 @@
             const userId = document.getElementById('registerUserId').value.trim();
             const phoneSuffix = document.getElementById('registerPhoneSuffix').value.trim();
 
-            if (!userId) { alert('请输入用户ID'); return; }
-            if (!/^\d{4}$/.test(phoneSuffix)) { alert('请输入有效的四位数手机尾号'); return; }
+            if (!userId || !phoneSuffix) { alert('请输入完整信息'); return; }
 
-            // 1. 获取云端最新数据 (确保不覆盖别人刚注册的账号)
-            // 虽然我们有 window.allUsers，但注册时为了安全，建议强制读取一次最新版
-            let currentUsers = [];
-            try {
-                const userDocRef = window.doc(window.db, "nba2k", "users");
-                const userDocSnap = await window.getDoc(userDocRef);
-
-                if (userDocSnap.exists()) {
-                    console.log("用户列表读取成功");
-                    console.log("userDocSnap.data().list:", userDocSnap.data().list);
-                    currentUsers = userDocSnap.data().list || [];
-                }
-            } catch (e) {
-                console.error("读取用户列表失败", e);
-                alert("连接服务器失败，请检查网络");
+            if (window.allUsers.some(u => u.userId === userId)) {
+                alert('用户ID已存在');
                 return;
             }
 
-            // 2. 检查重复
-            if (currentUsers.some(user => user.userId === userId)) {
-                alert('该用户ID已存在，请更换');
-                return;
-            }
-
-            // 3. 添加新用户
-            currentUsers.push({ userId, phoneSuffix });
-
-            // 4. 保存回云端
-            try {
-                await window.setDoc(window.doc(window.db, "nba2k", "users"), {
-                    list: currentUsers
-                });
-                alert('注册成功，请登录');
+            const query = Bmob.Query('GameUsers');
+            query.set("userId", userId);
+            query.set("phoneSuffix", phoneSuffix);
+            query.save().then(res => {
+                alert('注册成功');
+                // 手动推入本地缓存，让界面立刻反应
+                window.allUsers.push({ userId, phoneSuffix });
                 switchAuthTab('login');
-            } catch (e) {
-                console.error("注册失败", e);
-                alert("注册保存失败: " + e.message);
-            }
+            }).catch(err => {
+                alert('注册失败: ' + err);
+            });
         }
 
         function login() {
             const userId = document.getElementById('loginUserId').value.trim();
             const phoneSuffix = document.getElementById('loginPhoneSuffix').value.trim();
 
-            // 检查数据是否已经加载
-            if (!window.allUsers) {
-                alert("系统正在连接服务器，请稍后几秒再试...");
+            if (!window.allUsers || window.allUsers.length === 0) {
+                alert("正在加载用户数据，请稍等...");
+                fetchAllUsers(); // 尝试重新拉取
                 return;
             }
 
-            // 在全局变量中查找匹配的用户
             const user = window.allUsers.find(u => u.userId === userId && u.phoneSuffix === phoneSuffix);
-
             if (!user) {
-                alert('用户ID或手机尾号错误（或账号尚未同步，请稍等）');
+                alert('账号或验证码错误');
                 return;
             }
 
-            // 登录成功，保存状态到本地，以免刷新页面需要重登
             localStorage.setItem('nba2k_current_user', userId);
-
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('unauthorizedMessage').style.display = 'none';
-
-            // 记录日志
             logOperation('系统操作', `用户 ${userId} 登录成功`);
         }
 
@@ -1739,7 +1623,192 @@
             originalInitializeTable();
         };
 
-        window.onload = initializeTable;
+        window.onload = function () {
+            // 1. 初始化本地用户状态
+            initUserStorage();
+            const currentUser = localStorage.getItem('nba2k_current_user');
+            if (currentUser) {
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('unauthorizedMessage').style.display = 'none';
+            }
+
+            // 2. 确保表格有默认结构，防止渲染报错
+            if (tableData.length === 0) {
+                for (let i = 0; i < ROW_COUNT; i++) {
+                    tableData.push({
+                        groupId: '', cost: 0, sales: 0,
+                        showcases: { immortal: [], legendary: [], 'hall-of-fame': [], gold: [], silver: [], bronze: [] }
+                    });
+                }
+            }
+
+            // 3. 先渲染一次（可能是空表），等待 Bmob 数据覆盖
+            originalRenderTable();
+
+            // 4. 开始连接 Bmob 并同步数据
+            initPolling();
+        };
+
+        function initPolling() {
+            console.log("正在启动数据同步...");
+
+            // 立即执行一次
+            fetchMainData();
+            fetchItemData();
+            fetchLogs();
+            fetchAllUsers();
+
+            // 开启自动轮询 (每 3000 毫秒 = 3秒同步一次)
+            // 你可以修改这个数字，越小同步越快，但流量消耗越大
+            setInterval(() => {
+                // 只有当用户没有正在输入的时候才刷新，防止打断输入
+                // document.activeElement 检查当前焦点是否在输入框里
+                const tagName = document.activeElement ? document.activeElement.tagName : '';
+                if (tagName !== 'INPUT' && tagName !== 'TEXTAREA') {
+                    fetchMainData();
+                } else {
+                    console.log("用户正在输入，跳过本次表格刷新");
+                }
+
+                // 物资库和日志可以随时刷新
+                fetchItemData();
+                fetchLogs();
+                // 用户列表不需要频繁刷新，这里不放进去
+            }, 3000);
+        }
+
+        // --- A. 拉取主表格 ---
+        function fetchMainData() {
+            const query = Bmob.Query('MainData');
+            query.find().then(res => {
+                if (res.length > 0) {
+                    // 如果云端 ID 还没记下来，记下来
+                    if (!window.mainDataId) window.mainDataId = res[0].objectId;
+
+                    // 只有数据不一样时才渲染，避免页面闪烁
+                    const remoteData = res[0].tableData || [];
+                    // 简单对比长度或者转 JSON 对比
+                    if (JSON.stringify(tableData) !== JSON.stringify(remoteData)) {
+                        console.log("检测到云端表格更新，正在同步...");
+                        tableData = remoteData;
+                        originalRenderTable();
+                    }
+                } else {
+                    // 如果完全没数据，初始化
+                    if (!window.mainDataId) {
+                        console.log("初始化主表格...");
+                        const q = Bmob.Query('MainData');
+                        q.set("tableData", tableData);
+                        q.save().then(obj => window.mainDataId = obj.objectId);
+                    }
+                }
+            }).catch(err => console.error("同步表格失败:", err));
+        }
+
+        // --- B. 拉取物资库 ---
+        function fetchItemData() {
+            const query = Bmob.Query('ItemData');
+            query.find().then(res => {
+                if (res.length > 0) {
+                    // 1. 记录 ID
+                    if (!window.itemDbId) window.itemDbId = res[0].objectId;
+
+                    const remoteItems = res[0].items || [];
+
+                    // 2. 【关键修改】如果云端存在这行数据，但是数组是空的，说明是刚初始化的空表
+                    // 此时我们需要强制写入默认物资
+                    if (remoteItems.length === 0) {
+                        console.log("检测到物资库为空，正在写入默认物资...");
+                        initDefaultItems();
+                        return;
+                    }
+
+                    // 3. 正常同步逻辑
+                    if (JSON.stringify(itemDatabase) !== JSON.stringify(remoteItems)) {
+                        itemDatabase = remoteItems;
+                        // 如果物资库面板开着，刷新它
+                        const container = document.getElementById('itemListContainer');
+                        if (container && container.innerHTML !== "") {
+                            renderItemList();
+                        }
+                    }
+                } else {
+                    // 4. 如果连表都不存在
+                    initDefaultItems();
+                }
+            }).catch(err => {
+                console.warn("拉取物资库失败:", err);
+            });
+        }
+
+        // --- C. 拉取日志 ---
+        function fetchLogs() {
+            const query = Bmob.Query('LogData');
+            query.find().then(res => {
+                if (res.length > 0) {
+                    if (!window.logsId) window.logsId = res[0].objectId;
+
+                    const remoteLogs = res[0].logs || [];
+                    // 只有日志数量变了才刷新
+                    if (remoteLogs.length !== operationLogs.length) {
+                        operationLogs = remoteLogs;
+                        renderOperationLogs();
+                    }
+                } else {
+                    if (!window.logsId) {
+                        const q = Bmob.Query('LogData');
+                        q.set("logs", []);
+                        q.save().then(obj => window.logsId = obj.objectId);
+                    }
+                }
+            });
+        }
+
+        // 初始化默认物资库逻辑
+        function initDefaultItems() {
+            const defaultItems = [
+                { id: 1, quality: 'bronze', name: '全属性微幅增幅卡', description: '全属性+1' },
+                { id: 42, quality: 'silver', name: '全属性进阶增幅卡', description: '全属性+2' },
+                { id: 108, quality: 'gold', name: '高级控运属性提升包', description: '控球+30，运球速度+30' },
+                { id: 153, quality: 'hall-of-fame', name: '传奇球商属性片', description: '传球智商+40，投篮智商+40，协防智商+40，造犯规+10' },
+                { id: 206, quality: 'legendary', name: '欧气翻倍卡', description: '下一次搜索物资时，幸运值增加' },
+                { id: 456, quality: 'immortal', name: '比尔·拉塞尔8枚总冠军指环臻品', description: '传奇中锋专属' }
+            ];
+
+            // 先在本地显示，让用户看着爽
+            itemDatabase = defaultItems;
+            const container = document.getElementById('itemListContainer');
+            if (container && container.innerHTML !== "") renderItemList();
+
+            const query = Bmob.Query('ItemData');
+
+            // 【关键修改】判断是“新建”还是“更新”
+            if (window.itemDbId) {
+                // 如果 ID 存在，说明表已经在那里了（虽然是空的），我们要“修改”它，而不是新建
+                console.log("正在填充空表 ID:", window.itemDbId);
+                query.get(window.itemDbId).then(obj => {
+                    obj.set("items", defaultItems);
+                    obj.save().then(() => console.log("默认物资填充成功"));
+                });
+            } else {
+                // ID 不存在，说明完全没表，新建一行
+                console.log("正在新建物资表...");
+                query.set("items", defaultItems);
+                query.save().then(obj => {
+                    window.itemDbId = obj.objectId;
+                    console.log("默认物资新建成功");
+                });
+            }
+        }
+
+        // --- D. 拉取用户列表 ---
+        function fetchAllUsers() {
+            const query = Bmob.Query('GameUsers');
+            query.limit(500);
+            query.find().then(res => {
+                window.allUsers = res || [];
+            });
+        }
     </script>
 </body>
 
